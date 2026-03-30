@@ -44,8 +44,8 @@ export default function App() {
         <p className="eyebrow">Plotra Monorepo</p>
         <h1>React 프론트엔드와 TypeScript 백엔드가 연결된 기본 구조</h1>
         <p className="hero-copy">
-          로컬 개발에서는 Vite 프록시를 통해 백엔드와 연결되고, Docker 실행에서는
-          Nginx가 같은 역할을 수행합니다.
+          로컬 개발에서는 Vite 프록시를 통해 백엔드와 연결되고, Docker
+          실행에서는 Nginx가 같은 역할을 수행합니다.
         </p>
 
         <div className="status-grid">
@@ -58,12 +58,18 @@ export default function App() {
           <article className="status-card">
             <span>백엔드 상태</span>
             <strong>{health?.status ?? (error ? "error" : "checking")}</strong>
-            <small>{health ? new Date(health.timestamp).toLocaleString("ko-KR") : error ?? "응답 대기 중"}</small>
+            <small>
+              {health
+                ? new Date(health.timestamp).toLocaleString("ko-KR")
+                : (error ?? "응답 대기 중")}
+            </small>
           </article>
 
           <article className="status-card">
             <span>DB 설정</span>
-            <strong>{health?.databaseConfigured ? "configured" : "pending"}</strong>
+            <strong>
+              {health?.databaseConfigured ? "configured" : "pending"}
+            </strong>
             <small>PostgreSQL은 docker compose로 관리</small>
           </article>
         </div>
