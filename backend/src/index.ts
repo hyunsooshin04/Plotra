@@ -1,15 +1,22 @@
 import express from "express";
+import { pool } from "./db/index.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
-const databaseUrl = process.env.DATABASE_URL ?? null;
 
-app.get("/api/health", (_request, response) => {
+app.get("/api/health", async (_request, response) => {
+  let dbStatus = "disconnected";
+  try {
+    await pool.query("SELECT 1");
+    dbStatus = "connected";
+  } catch {
+    dbStatus = "error";
+  }
   response.json({
     service: "backend",
     status: "ok",
     timestamp: new Date().toISOString(),
-    databaseConfigured: Boolean(databaseUrl),
+    database: dbStatus,
   });
 });
 
