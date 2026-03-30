@@ -1,0 +1,1252 @@
+openapi: "3.0.3"
+info:
+  title: Plotra API
+  description: 소설 창작 AI 보조 플랫폼 - REST API
+  version: "1.0.0"
+servers:
+  - url: http://localhost:4000
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Health
+  - name: Projects
+  - name: Chapters
+  - name: Characters
+  - name: Character Relationships
+  - name: World Items
+  - name: World Item Links
+  - name: World Item Characters
+  - name: Plots
+  - name: Plot Chapters
+  - name: Plot Characters
+  - name: Notes
+  - name: Glossary
+
+# ──────────────────────────────────────
+# Paths
+# ──────────────────────────────────────
+security:
+  - BearerAuth: []
+
+paths:
+  # ─── Auth ───
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, nickname]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 1 }
+                nickname: { type: string }
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/UserPublic" }
+                  token: { type: string, description: "Encrypted JWT token" }
+        "400":
+          description: Missing fields
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/UserPublic" }
+                  token: { type: string, description: "Encrypted JWT token" }
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      operationId: getMe
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserPublic" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { type: object, properties: { error: { type: string } } }
+
+  # ─── Health ───
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service: { type: string }
+                  status: { type: string }
+                  timestamp: { type: string, format: date-time }
+                  database: { type: string }
+
+  # ─── Projects ───
+  /api/projects:
+    get:
+      tags: [Projects]
+      summary: List projects
+      operationId: listProjects
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Project" }
+    post:
+      tags: [Projects]
+      summary: Create project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                genre: { type: string }
+                settings: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+
+  /api/projects/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Projects]
+      summary: Get project
+      operationId: getProject
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Projects]
+      summary: Update project
+      operationId: updateProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                genre: { type: string }
+                settings: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Project" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Projects]
+      summary: Delete project (soft)
+      operationId: deleteProject
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Chapters ───
+  /api/projects/{projectId}/chapters:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [Chapters]
+      summary: List chapters
+      operationId: listChapters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Chapter" }
+    post:
+      tags: [Chapters]
+      summary: Create chapter
+      operationId: createChapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                content: { type: string }
+                summary: { type: string }
+                sortOrder: { type: integer }
+                metadata: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chapter" }
+
+  /api/projects/{projectId}/chapters/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Chapters]
+      summary: Get chapter
+      operationId: getChapter
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chapter" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Chapters]
+      summary: Update chapter
+      operationId: updateChapter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                summary: { type: string }
+                sortOrder: { type: integer }
+                metadata: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chapter" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Chapters]
+      summary: Delete chapter (soft)
+      operationId: deleteChapter
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Characters ───
+  /api/projects/{projectId}/characters:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [Characters]
+      summary: List characters
+      operationId: listCharacters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Character" }
+    post:
+      tags: [Characters]
+      summary: Create character
+      operationId: createCharacter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                profile: { type: string }
+                personality: { type: string }
+                goals: { type: string }
+                weaknesses: { type: string }
+                conflicts: { type: string }
+                backstory: { type: string }
+                appearance: { type: string }
+                speechStyle: { type: string }
+                growthArc: { type: string }
+                traits: { type: object }
+                metadata: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Character" }
+
+  /api/projects/{projectId}/characters/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Characters]
+      summary: Get character
+      operationId: getCharacter
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Character" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Characters]
+      summary: Update character
+      operationId: updateCharacter
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                profile: { type: string }
+                personality: { type: string }
+                goals: { type: string }
+                weaknesses: { type: string }
+                conflicts: { type: string }
+                backstory: { type: string }
+                appearance: { type: string }
+                speechStyle: { type: string }
+                growthArc: { type: string }
+                traits: { type: object }
+                metadata: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Character" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Characters]
+      summary: Delete character (soft)
+      operationId: deleteCharacter
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Character Relationships ───
+  /api/projects/{projectId}/characters/{id}/relationships:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Character Relationships]
+      summary: List relationships
+      operationId: listCharacterRelationships
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CharacterRelationship" }
+    post:
+      tags: [Character Relationships]
+      summary: Create relationship
+      operationId: createCharacterRelationship
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [relatedCharacterId, relationshipType]
+              properties:
+                relatedCharacterId: { type: string, format: uuid }
+                relationshipType:
+                  type: string
+                  enum: [ally, rival, mentor, student, family, romantic, enemy, colleague, other]
+                description: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CharacterRelationship" }
+
+  /api/projects/{projectId}/characters/{id}/relationships/{relId}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/RelId"
+    patch:
+      tags: [Character Relationships]
+      summary: Update relationship
+      operationId: updateCharacterRelationship
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                relationshipType:
+                  type: string
+                  enum: [ally, rival, mentor, student, family, romantic, enemy, colleague, other]
+                description: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CharacterRelationship" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Character Relationships]
+      summary: Delete relationship
+      operationId: deleteCharacterRelationship
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── World Items ───
+  /api/projects/{projectId}/world-items:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [World Items]
+      summary: List world items
+      operationId: listWorldItems
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorldItem" }
+    post:
+      tags: [World Items]
+      summary: Create world item
+      operationId: createWorldItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category]
+              properties:
+                name: { type: string }
+                category:
+                  type: string
+                  enum: [region, nation, city, race, organization, magic_system, technology, rule, religion, language, other]
+                content: { type: string }
+                summary: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                metadata: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorldItem" }
+
+  /api/projects/{projectId}/world-items/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [World Items]
+      summary: Get world item
+      operationId: getWorldItem
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorldItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [World Items]
+      summary: Update world item
+      operationId: updateWorldItem
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                category:
+                  type: string
+                  enum: [region, nation, city, race, organization, magic_system, technology, rule, religion, language, other]
+                content: { type: string }
+                summary: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                metadata: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorldItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [World Items]
+      summary: Delete world item (soft)
+      operationId: deleteWorldItem
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── World Item Links ───
+  /api/projects/{projectId}/world-items/{id}/links:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [World Item Links]
+      summary: List world item links
+      operationId: listWorldItemLinks
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorldItemLink" }
+    post:
+      tags: [World Item Links]
+      summary: Create world item link
+      operationId: createWorldItemLink
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetId]
+              properties:
+                targetId: { type: string, format: uuid }
+                description: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorldItemLink" }
+
+  /api/projects/{projectId}/world-items/{id}/links/{linkId}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/LinkId"
+    delete:
+      tags: [World Item Links]
+      summary: Delete world item link
+      operationId: deleteWorldItemLink
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── World Item ↔ Characters ───
+  /api/projects/{projectId}/world-items/{id}/characters:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [World Item Characters]
+      summary: List character links for world item
+      operationId: listWorldItemCharacters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CharacterWorldItem" }
+    post:
+      tags: [World Item Characters]
+      summary: Link character to world item
+      operationId: createWorldItemCharacter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [characterId]
+              properties:
+                characterId: { type: string, format: uuid }
+                description: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CharacterWorldItem" }
+
+  /api/projects/{projectId}/world-items/{id}/characters/{linkId}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/LinkId"
+    delete:
+      tags: [World Item Characters]
+      summary: Unlink character from world item
+      operationId: deleteWorldItemCharacter
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Plots ───
+  /api/projects/{projectId}/plots:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [Plots]
+      summary: List plot items
+      operationId: listPlotItems
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlotItem" }
+    post:
+      tags: [Plots]
+      summary: Create plot item
+      operationId: createPlotItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type]
+              properties:
+                title: { type: string }
+                type:
+                  type: string
+                  enum: [synopsis, act, event, foreshadowing, conflict, ending_candidate, scene, other]
+                content: { type: string }
+                sortOrder: { type: integer }
+                metadata: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlotItem" }
+
+  /api/projects/{projectId}/plots/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Plots]
+      summary: Get plot item
+      operationId: getPlotItem
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlotItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Plots]
+      summary: Update plot item
+      operationId: updatePlotItem
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                type:
+                  type: string
+                  enum: [synopsis, act, event, foreshadowing, conflict, ending_candidate, scene, other]
+                content: { type: string }
+                sortOrder: { type: integer }
+                metadata: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlotItem" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Plots]
+      summary: Delete plot item (soft)
+      operationId: deletePlotItem
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Plot ↔ Chapters ───
+  /api/projects/{projectId}/plots/{id}/chapters:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Plot Chapters]
+      summary: List linked chapters
+      operationId: listPlotItemChapters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlotItemChapter" }
+    post:
+      tags: [Plot Chapters]
+      summary: Link chapter to plot item
+      operationId: createPlotItemChapter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chapterId]
+              properties:
+                chapterId: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlotItemChapter" }
+
+  /api/projects/{projectId}/plots/{id}/chapters/{linkId}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/LinkId"
+    delete:
+      tags: [Plot Chapters]
+      summary: Unlink chapter from plot item
+      operationId: deletePlotItemChapter
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Plot ↔ Characters ───
+  /api/projects/{projectId}/plots/{id}/characters:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Plot Characters]
+      summary: List linked characters
+      operationId: listPlotItemCharacters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PlotItemCharacter" }
+    post:
+      tags: [Plot Characters]
+      summary: Link character to plot item
+      operationId: createPlotItemCharacter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [characterId]
+              properties:
+                characterId: { type: string, format: uuid }
+                role: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PlotItemCharacter" }
+
+  /api/projects/{projectId}/plots/{id}/characters/{linkId}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/LinkId"
+    delete:
+      tags: [Plot Characters]
+      summary: Unlink character from plot item
+      operationId: deletePlotItemCharacter
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Notes ───
+  /api/projects/{projectId}/notes:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [Notes]
+      summary: List notes
+      operationId: listNotes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Note" }
+    post:
+      tags: [Notes]
+      summary: Create note
+      operationId: createNote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+                content: { type: string }
+                metadata: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+
+  /api/projects/{projectId}/notes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Notes]
+      summary: Get note
+      operationId: getNote
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Notes]
+      summary: Update note
+      operationId: updateNote
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                metadata: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Notes]
+      summary: Delete note (soft)
+      operationId: deleteNote
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ─── Glossary ───
+  /api/projects/{projectId}/glossary:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+    get:
+      tags: [Glossary]
+      summary: List glossary entries
+      operationId: listGlossary
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GlossaryEntry" }
+    post:
+      tags: [Glossary]
+      summary: Create glossary entry
+      operationId: createGlossaryEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [term, definition]
+              properties:
+                term: { type: string }
+                definition: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                metadata: { type: object }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GlossaryEntry" }
+
+  /api/projects/{projectId}/glossary/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ProjectId"
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Glossary]
+      summary: Get glossary entry
+      operationId: getGlossaryEntry
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GlossaryEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Glossary]
+      summary: Update glossary entry
+      operationId: updateGlossaryEntry
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                term: { type: string }
+                definition: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+                metadata: { type: object }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GlossaryEntry" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Glossary]
+      summary: Delete glossary entry (soft)
+      operationId: deleteGlossaryEntry
+      responses:
+        "200": { $ref: "#/components/responses/Deleted" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+# ──────────────────────────────────────
+# Components
+# ──────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: "Encrypted JWT token"
+
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    LinkId:
+      name: linkId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RelId:
+      name: relId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+    Deleted:
+      description: Deleted
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              deleted: { type: boolean }
+
+  schemas:
+    UserPublic:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        nickname: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        genre: { type: string, nullable: true }
+        settings: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    Chapter:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        title: { type: string }
+        content: { type: string }
+        summary: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    Character:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        profile: { type: string, nullable: true }
+        personality: { type: string, nullable: true }
+        goals: { type: string, nullable: true }
+        weaknesses: { type: string, nullable: true }
+        conflicts: { type: string, nullable: true }
+        backstory: { type: string, nullable: true }
+        appearance: { type: string, nullable: true }
+        speechStyle: { type: string, nullable: true }
+        growthArc: { type: string, nullable: true }
+        traits: { type: object }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    CharacterRelationship:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        characterId: { type: string, format: uuid }
+        relatedCharacterId: { type: string, format: uuid }
+        relationshipType:
+          type: string
+          enum: [ally, rival, mentor, student, family, romantic, enemy, colleague, other]
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    WorldItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        name: { type: string }
+        category:
+          type: string
+          enum: [region, nation, city, race, organization, magic_system, technology, rule, religion, language, other]
+        content: { type: string }
+        summary: { type: string, nullable: true }
+        tags:
+          type: array
+          items: { type: string }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    WorldItemLink:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        sourceId: { type: string, format: uuid }
+        targetId: { type: string, format: uuid }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    CharacterWorldItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        characterId: { type: string, format: uuid }
+        worldItemId: { type: string, format: uuid }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    PlotItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        title: { type: string }
+        type:
+          type: string
+          enum: [synopsis, act, event, foreshadowing, conflict, ending_candidate, scene, other]
+        content: { type: string }
+        sortOrder: { type: integer }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    PlotItemChapter:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        plotItemId: { type: string, format: uuid }
+        chapterId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    PlotItemCharacter:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        plotItemId: { type: string, format: uuid }
+        characterId: { type: string, format: uuid }
+        role: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Note:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        title: { type: string }
+        content: { type: string }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+
+    GlossaryEntry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        projectId: { type: string, format: uuid }
+        term: { type: string }
+        definition: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
