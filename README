@@ -1,0 +1,56 @@
+# Plotra
+
+React 프론트엔드와 TypeScript 백엔드를 포함한 모노레포 기본 구조입니다.
+
+## 구조
+
+- `frontend`: Vite + React + TypeScript
+- `backend`: Express + TypeScript
+- `docker-compose.yml`: PostgreSQL, backend, frontend 실행 구성
+- `Makefile`: 개발 및 Docker 실행 명령
+
+## 시작하기
+
+### 1. 로컬 개발
+
+루트에서 의존성을 설치합니다.
+
+```bash
+npm install
+```
+
+개발 서버를 실행합니다.
+
+```bash
+make dev
+```
+
+실행 포트:
+
+- frontend: `http://localhost:3000`
+- backend: `http://localhost:4000`
+- postgres: `localhost:5432`
+
+### 2. PostgreSQL만 실행
+
+```bash
+make infra-up
+```
+
+### 3. 전체를 Docker로 실행
+
+```bash
+make start
+```
+
+실행 포트:
+
+- frontend: `http://localhost:3000`
+- backend: `http://localhost:4000`
+- postgres: `localhost:5432`
+
+## 참고
+
+- `make dev`는 로컬 Node.js 기반 개발 모드입니다.
+- `make start`는 `docker compose up --build`를 사용해 frontend, backend, postgres를 함께 실행합니다.
+- Windows에서 `make`를 쓰려면 GNU Make가 필요합니다. 없다면 동일한 동작을 `npm run dev`, `docker compose up -d db`, `docker compose up --build`로 실행할 수 있습니다.
