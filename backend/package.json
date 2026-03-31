@@ -6,7 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "db:push": "yes | drizzle-kit push",
+    "db:push": "tsx scripts/db-push.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
